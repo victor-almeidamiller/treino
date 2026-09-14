@@ -30,7 +30,7 @@ async function sendTo(profileId) {
   const subscription = JSON.parse(raw);
   const payload = JSON.stringify({
     title: "Hora do treino!",
-    body: "Bora treinar 💪",
+    body: "oii, esqueceu de me bloquear no app! bora treinar? 💪",
   });
   try {
     await webpush.sendNotification(subscription, payload);
