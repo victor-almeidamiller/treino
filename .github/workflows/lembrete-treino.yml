@@ -1,0 +1,28 @@
+name: Lembrete de treino
+
+on:
+  schedule:
+    - cron: "50 19 * * 1-5"   # Victor - 16:50 horário de Brasília, seg-sex
+    - cron: "30 21 * * 1-5"   # Kaio   - 18:30 horário de Brasília, seg-sex
+  workflow_dispatch: {}        # permite rodar manualmente pra testar
+
+jobs:
+  notificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências
+        run: npm install web-push
+
+      - name: Enviar notificação
+        env:
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: node send-notification.js
