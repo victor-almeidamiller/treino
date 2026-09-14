@@ -979,6 +979,18 @@ function renderRulesPage(){
   }
   html += '</div>';
 
+  html += '<div class="history" style="margin-top:14px;">';
+  html += '<h2>Notificações</h2>';
+  html += '<p style="color:var(--muted);font-size:.85rem;margin:0 0 14px;line-height:1.4;">Ative para receber um lembrete automático de treino (seg-sex).</p>';
+  html += '<button class="finish-btn" id="notifBtn" style="margin:0 0 4px;">Ativar notificações</button>';
+  html += '<div id="notifResult" style="display:none;margin-top:12px;">';
+  html += '<p style="font-size:.8rem;color:var(--muted);margin:0 0 8px;line-height:1.4;">Pronto! Copie o código abaixo e me envie (é só uma vez) pra eu concluir a ativação:</p>';
+  html += '<textarea id="notifSubJson" readonly style="width:100%;min-height:110px;font-family:monospace;font-size:.68rem;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);box-sizing:border-box;"></textarea>';
+  html += '<button class="reset-link" id="notifCopyBtn">Copiar código</button>';
+  html += '</div>';
+  html += '<p id="notifStatus" style="font-size:.8rem;color:var(--muted);margin:10px 0 0;"></p>';
+  html += '</div>';
+
   document.getElementById("content").innerHTML = html;
 
   document.querySelectorAll(".history-del").forEach(el => {
@@ -991,6 +1003,23 @@ function renderRulesPage(){
       }
     });
   });
+
+  const notifBtn = document.getElementById("notifBtn");
+  if (notifBtn) notifBtn.addEventListener("click", enableNotifications);
+  const notifCopyBtn = document.getElementById("notifCopyBtn");
+  if (notifCopyBtn) notifCopyBtn.addEventListener("click", () => {
+    const textEl = document.getElementById("notifSubJson");
+    if (!textEl) return;
+    textEl.select();
+    textEl.setSelectionRange(0, 999999);
+    try {
+      navigator.clipboard.writeText(textEl.value);
+    } catch(e){
+      document.execCommand("copy");
+    }
+    const statusEl = document.getElementById("notifStatus");
+    if (statusEl) statusEl.textContent = "Copiado!";
+  });
 }
 
 function render(){
@@ -1002,6 +1031,49 @@ function render(){
     renderRulesPage();
   } else {
     renderWorkoutPage(currentTab);
+  }
+}
+
+const VAPID_PUBLIC_KEY = "BOKIjGF3eSV1ASGm12jhsTKLVCVG-JbebXNDbCYiCIYMTLsANxpDPl0O2Ng-VVvxl3OWMM5NsTRUuxR5Erh_YpY";
+
+function urlBase64ToUint8Array(base64String){
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+async function enableNotifications(){
+  const statusEl = document.getElementById("notifStatus");
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)){
+    if (statusEl) statusEl.textContent = "Seu navegador não suporta notificações push.";
+    return;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted"){
+      if (statusEl) statusEl.textContent = "Permissão negada. Ative nas configurações do navegador pra tentar de novo.";
+      return;
+    }
+    const reg = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+    }
+    const json = JSON.stringify(sub, null, 2);
+    const textEl = document.getElementById("notifSubJson");
+    const resultEl = document.getElementById("notifResult");
+    if (textEl) textEl.value = json;
+    if (resultEl) resultEl.style.display = "block";
+    if (statusEl) statusEl.textContent = "";
+  } catch (e){
+    if (statusEl) statusEl.textContent = "Erro ao ativar: " + e.message;
   }
 }
 
