@@ -12,8 +12,8 @@ webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 // Qual cron disparou -> qual perfil notificar.
 // Precisa bater exatamente com os crons do arquivo .github/workflows/lembrete-treino.yml
 const SCHEDULE_MAP = {
-  "50 19 * * 1-5": "victor", // 16:50 horário de Brasília
-  "30 21 * * 1-5": "kaio",   // 18:30 horário de Brasília
+  "47 19 * * 1-5": "victor", // 16:47 horário de Brasília
+  "34 21 * * 1-5": "kaio",   // 18:34 horário de Brasília
 };
 
 async function sendTo(profileId) {
