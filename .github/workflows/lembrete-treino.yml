@@ -2,8 +2,8 @@ name: Lembrete de treino
 
 on:
   schedule:
-    - cron: "50 19 * * 1-5"   # Victor - 16:50 horário de Brasília, seg-sex
-    - cron: "30 21 * * 1-5"   # Kaio   - 18:30 horário de Brasília, seg-sex
+    - cron: "47 19 * * 1-5"   # Victor - 16:47 horário de Brasília, seg-sex
+    - cron: "34 21 * * 1-5"   # Kaio   - 18:34 horário de Brasília, seg-sex
   workflow_dispatch: {}        # permite rodar manualmente pra testar
 
 jobs:
