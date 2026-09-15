@@ -1,11 +1,9 @@
 name: Lembrete de treino
 
 on:
-  schedule:
-    - cron: "3 11 * * 1-5"    # Bom dia - 08:03 horário de Brasília, seg-sex
-    - cron: "4 15 * * 1-5"    # Almoço  - 12:04 horário de Brasília, seg-sex
-    - cron: "53 20 * * 1-5"   # Treino  - 17:53 horário de Brasília, seg-sex
-  workflow_dispatch:           # permite rodar manualmente, ou via chamada externa
+  # Sem "schedule" nativo do GitHub — quem dispara agora é só o cron-job.org,
+  # pra evitar notificação duplicada (o agendamento nativo do GitHub não era confiável).
+  workflow_dispatch:
     inputs:
       message:
         description: "Qual mensagem enviar: bomdia, almoco, treino ou vazio (testa as 3)"
@@ -30,6 +28,5 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
-          SCHEDULE: ${{ github.event.schedule }}
           MESSAGE: ${{ github.event.inputs.message }}
         run: node send-notification.js
