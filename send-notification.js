@@ -25,9 +25,6 @@ const MESSAGES = {
   },
 };
 
-// Qual cron disparou -> qual mensagem enviar.
-// Precisa bater exatamente com os crons do arquivo .github/workflows/lembrete-treino.yml
-
 async function sendTo(profileId, messageKey) {
   const file = path.join(__dirname, "subscriptions", profileId + ".json");
   if (!fs.existsSync(file)) {
@@ -56,28 +53,6 @@ async function sendToBoth(messageKey) {
 }
 
 async function main() {
-  // Chamada externa (cron-job.org) informando exatamente qual mensagem mandar.
-  if (MESSAGES[MESSAGE]) {
-    await sendToBoth(MESSAGE);
-    return;
-  }
-  // Agendamento nativo do GitHub disparou -> descobre a mensagem pelo horário do cron.
-  if (SCHEDULE) {
-    const messageKey = SCHEDULE_MAP[SCHEDULE];
-    if (!messageKey) {
-      console.log("Cron não reconhecido:", SCHEDULE);
-      return;
-    }
-    await sendToBoth(messageKey);
-    return;
-  }
-  // Rodando manualmente sem nada especificado -> testa as 3 mensagens, pros dois.
-  for (const key of Object.keys(MESSAGES)) {
-    await sendToBoth(key);
-  }
-}
-
-async function main() {
   // Chamada do cron-job.org informando exatamente qual mensagem mandar.
   if (MESSAGES[MESSAGE]) {
     await sendToBoth(MESSAGE);
@@ -88,3 +63,5 @@ async function main() {
     await sendToBoth(key);
   }
 }
+
+main();
