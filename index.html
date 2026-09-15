@@ -661,6 +661,7 @@ function removeHistoryEntryFromCloud(profileId, id){
 }
 
 let otherHistory = [];
+let otherHistoryVisible = false;
 function loadOtherHistory(callback){
   const otherId = currentProfile === "victor" ? "kaio" : "victor";
   const ref = cloudHistoryRef(otherId);
@@ -728,6 +729,7 @@ function selectProfile(id){
   DATA = PROFILES[id].data;
   TAB_ORDER = PROFILES[id].tabOrder;
   otherHistory = [];
+  otherHistoryVisible = false;
   initProfileData();
   hideProfileGate();
   updateProfileSwitchLabel();
@@ -1007,22 +1009,34 @@ function renderWorkoutPage(tabKey){
 
 function renderRulesPage(){
   const otherId = currentProfile === "victor" ? "kaio" : "victor";
-  const combined = history.map(h => Object.assign({}, h, { owner: h.owner || currentProfile }))
-    .concat(otherHistory.map(h => Object.assign({}, h, { owner: h.owner || otherId })))
-    .sort((a,b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 30);
+  const otherLabel = PROFILES[otherId] ? PROFILES[otherId].label : "";
 
   let html = '<div class="history"><h2>Histórico recente</h2>';
-  if (combined.length === 0){
+  if (history.length === 0){
     html += '<div class="history-empty">Nenhum treino concluído ainda. Marque os exercícios e toque em "Concluir treino" para começar seu histórico.</div>';
   } else {
-    combined.forEach(h => {
-      const ownerLabel = PROFILES[h.owner] ? PROFILES[h.owner].label : "";
-      const mine = h.owner === currentProfile;
-      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + h.tab + '</span>' + h.label + ' <span style="color:var(--muted);font-size:.75rem;">— ' + ownerLabel + '</span></span>';
+    history.forEach(h => {
+      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + DATA[h.tab].label + '</span>' + h.label + '</span>';
       html += '<span class="history-right"><span style="color:var(--muted)">' + formatDate(h.date) + '</span>';
-      html += (mine ? '<button class="history-del" data-hid="' + h.id + '">×</button>' : '') + '</span></div>';
+      html += '<button class="history-del" data-hid="' + h.id + '">×</button></span></div>';
     });
+  }
+  html += '</div>';
+
+  html += '<div class="history" style="margin-top:14px;">';
+  html += '<h2>Treinos do ' + otherLabel + '</h2>';
+  html += '<button class="reset-link" id="toggleOtherHistoryBtn" style="margin:0 0 4px;">' + (otherHistoryVisible ? 'Esconder' : 'Ver treinos do ' + otherLabel) + '</button>';
+  if (otherHistoryVisible){
+    html += '<div style="margin-top:8px;">';
+    if (otherHistory.length === 0){
+      html += '<div class="history-empty">Nenhum treino concluído por ' + otherLabel + ' ainda.</div>';
+    } else {
+      otherHistory.slice().sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 20).forEach(h => {
+        html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + h.tab + '</span>' + h.label + '</span>';
+        html += '<span class="history-right"><span style="color:var(--muted)">' + formatDate(h.date) + '</span></span></div>';
+      });
+    }
+    html += '</div>';
   }
   html += '</div>';
 
@@ -1052,8 +1066,18 @@ function renderRulesPage(){
     });
   });
 
-  loadOtherHistory(() => {
-    if (currentTab === "RULES") render();
+    const toggleOtherBtn = document.getElementById("toggleOtherHistoryBtn");
+  if (toggleOtherBtn) toggleOtherBtn.addEventListener("click", () => {
+    if (otherHistoryVisible){
+      otherHistoryVisible = false;
+      render();
+    } else {
+      toggleOtherBtn.textContent = "Carregando...";
+      loadOtherHistory(() => {
+        otherHistoryVisible = true;
+        if (currentTab === "RULES") render();
+      });
+    }
   });
 
   const notifBtn = document.getElementById("notifBtn");
