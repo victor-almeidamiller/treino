@@ -629,6 +629,49 @@ const PROFILE_KEY = "treinoAppProfile_v1";
 const THEME_KEY = "treinoAppTheme_v1";
 const REST_DURATION = 60;
 
+// Firebase — só usado pra compartilhar o histórico de treinos concluídos entre Victor e Kaio.
+const firebaseConfig = {
+  apiKey: "AIzaSyDZIY7mpM5VT_z7AVSORisDOqPAOo5vX4s",
+  authDomain: "treino-app-1fdba.firebaseapp.com",
+  databaseURL: "https://treino-app-1fdba-default-rtdb.firebaseio.com",
+  projectId: "treino-app-1fdba",
+};
+let db = null;
+try {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.database();
+} catch (e) {
+  console.log("Firebase não configurado ainda:", e.message);
+}
+
+function cloudHistoryRef(profileId){
+  return db ? db.ref("history/" + profileId) : null;
+}
+
+function syncHistoryEntryToCloud(profileId, entry){
+  const ref = cloudHistoryRef(profileId);
+  if (!ref) return;
+  try { ref.child(entry.id).set(entry); } catch(e){ console.log("Erro ao sincronizar histórico:", e.message); }
+}
+
+function removeHistoryEntryFromCloud(profileId, id){
+  const ref = cloudHistoryRef(profileId);
+  if (!ref) return;
+  try { ref.child(id).remove(); } catch(e){ console.log("Erro ao remover histórico da nuvem:", e.message); }
+}
+
+let otherHistory = [];
+function loadOtherHistory(callback){
+  const otherId = currentProfile === "victor" ? "kaio" : "victor";
+  const ref = cloudHistoryRef(otherId);
+  if (!ref){ callback(); return; }
+  ref.once("value").then(snap => {
+    const val = snap.val() || {};
+    otherHistory = Object.values(val);
+    callback();
+  }).catch(() => { callback(); });
+}
+
 function stateKey(){ return "treinoAppState_v1_" + currentProfile; }
 function historyKey(){ return "treinoAppHistory_v1_" + currentProfile; }
 
@@ -684,6 +727,7 @@ function selectProfile(id){
   saveProfile(id);
   DATA = PROFILES[id].data;
   TAB_ORDER = PROFILES[id].tabOrder;
+  otherHistory = [];
   initProfileData();
   hideProfileGate();
   updateProfileSwitchLabel();
@@ -931,11 +975,13 @@ function renderWorkoutPage(tabKey){
     });
   });
 
-  document.getElementById("finishBtn").addEventListener("click", () => {
+    document.getElementById("finishBtn").addEventListener("click", () => {
     const id = Date.now() + "_" + Math.random().toString(36).slice(2);
-    history.unshift({ id, tab: tabKey, label: t.title, date: new Date().toISOString() });
+    const entry = { id, tab: tabKey, label: t.title, date: new Date().toISOString(), owner: currentProfile };
+    history.unshift(entry);
     history = history.slice(0, 20);
     saveHistory(history);
+    syncHistoryEntryToCloud(currentProfile, entry);
     t.groups.forEach((g, gi) => g.items.forEach((it, ii) => {
       const n = parseSets(it[1]);
       for (let si = 0; si < n; si++) delete state[setKey(tabKey, gi, ii, si)];
@@ -960,14 +1006,22 @@ function renderWorkoutPage(tabKey){
 }
 
 function renderRulesPage(){
+  const otherId = currentProfile === "victor" ? "kaio" : "victor";
+  const combined = history.map(h => Object.assign({}, h, { owner: h.owner || currentProfile }))
+    .concat(otherHistory.map(h => Object.assign({}, h, { owner: h.owner || otherId })))
+    .sort((a,b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 30);
+
   let html = '<div class="history"><h2>Histórico recente</h2>';
-  if (history.length === 0){
+  if (combined.length === 0){
     html += '<div class="history-empty">Nenhum treino concluído ainda. Marque os exercícios e toque em "Concluir treino" para começar seu histórico.</div>';
   } else {
-    history.forEach(h => {
-      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + DATA[h.tab].label + '</span>' + h.label + '</span>';
+    combined.forEach(h => {
+      const ownerLabel = PROFILES[h.owner] ? PROFILES[h.owner].label : "";
+      const mine = h.owner === currentProfile;
+      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + h.tab + '</span>' + h.label + ' <span style="color:var(--muted);font-size:.75rem;">— ' + ownerLabel + '</span></span>';
       html += '<span class="history-right"><span style="color:var(--muted)">' + formatDate(h.date) + '</span>';
-      html += '<button class="history-del" data-hid="' + h.id + '">×</button></span></div>';
+      html += (mine ? '<button class="history-del" data-hid="' + h.id + '">×</button>' : '') + '</span></div>';
     });
   }
   html += '</div>';
@@ -989,12 +1043,17 @@ function renderRulesPage(){
   document.querySelectorAll(".history-del").forEach(el => {
     el.addEventListener("click", () => {
       const hid = el.getAttribute("data-hid");
-      if (confirm("Apagar este registro do histórico?")){
+           if (confirm("Apagar este registro do histórico?")){
         history = history.filter(h => String(h.id) !== hid);
         saveHistory(history);
+        removeHistoryEntryFromCloud(currentProfile, hid);
         render();
       }
     });
+  });
+
+  loadOtherHistory(() => {
+    if (currentTab === "RULES") render();
   });
 
   const notifBtn = document.getElementById("notifBtn");
