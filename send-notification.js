@@ -6,17 +6,35 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:exemplo@exemplo.com";
 const SCHEDULE = process.env.SCHEDULE || "";
+const MESSAGE = process.env.MESSAGE || "";
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
-// Qual cron disparou -> qual perfil notificar.
-// Precisa bater exatamente com os crons do arquivo .github/workflows/lembrete-treino.yml
-const SCHEDULE_MAP = {
-  "47 19 * * 1-5": "victor", // 16:47 horário de Brasília
-  "34 21 * * 1-5": "kaio",   // 18:34 horário de Brasília
+// Textos de cada lembrete.
+const MESSAGES = {
+  bomdia: {
+    title: "Bom dia!",
+    body: "Vamos nos alimentar bem e beber bastante água! ☀️💦",
+  },
+  almoco: {
+    title: "Hora do almoço!",
+    body: "Temos que nos alimentar para ter força durante todo o dia! 🥗",
+  },
+  treino: {
+    title: "Hora do treino!",
+    body: "💪 Bora treinar!",
+  },
 };
 
-async function sendTo(profileId) {
+// Qual cron disparou -> qual mensagem enviar.
+// Precisa bater exatamente com os crons do arquivo .github/workflows/lembrete-treino.yml
+const SCHEDULE_MAP = {
+  "3 11 * * 1-5": "bomdia",   // 08:03 horário de Brasília
+  "4 15 * * 1-5": "almoco",  // 12:04 horário de Brasília
+  "53 20 * * 1-5": "treino", // 17:53 horário de Brasília
+};
+
+async function sendTo(profileId, messageKey) {
   const file = path.join(__dirname, "subscriptions", profileId + ".json");
   if (!fs.existsSync(file)) {
     console.log("Sem inscrição salva para " + profileId + ", pulando.");
@@ -28,31 +46,41 @@ async function sendTo(profileId) {
     return;
   }
   const subscription = JSON.parse(raw);
-  const payload = JSON.stringify({
-    title: "Hora do treino!",
-    body: "oii, esqueceu de me bloquear no app! bora treinar? 💪",
-  });
+  const msg = MESSAGES[messageKey];
+  const payload = JSON.stringify({ title: msg.title, body: msg.body });
   try {
     await webpush.sendNotification(subscription, payload);
-    console.log("Notificação enviada para " + profileId);
+    console.log("Notificação (" + messageKey + ") enviada para " + profileId);
   } catch (err) {
     console.error("Erro ao enviar para " + profileId + ":", err.statusCode || err.message);
   }
 }
 
+async function sendToBoth(messageKey) {
+  await sendTo("victor", messageKey);
+  await sendTo("kaio", messageKey);
+}
+
 async function main() {
-  // Rodando manualmente (workflow_dispatch) não tem SCHEDULE -> notifica todo mundo, útil pra testar.
-  if (!SCHEDULE) {
-    await sendTo("victor");
-    await sendTo("kaio");
+  // Chamada externa (cron-job.org) informando exatamente qual mensagem mandar.
+  if (MESSAGES[MESSAGE]) {
+    await sendToBoth(MESSAGE);
     return;
   }
-  const target = SCHEDULE_MAP[SCHEDULE];
-  if (!target) {
-    console.log("Cron não reconhecido:", SCHEDULE);
+  // Agendamento nativo do GitHub disparou -> descobre a mensagem pelo horário do cron.
+  if (SCHEDULE) {
+    const messageKey = SCHEDULE_MAP[SCHEDULE];
+    if (!messageKey) {
+      console.log("Cron não reconhecido:", SCHEDULE);
+      return;
+    }
+    await sendToBoth(messageKey);
     return;
   }
-  await sendTo(target);
+  // Rodando manualmente sem nada especificado -> testa as 3 mensagens, pros dois.
+  for (const key of Object.keys(MESSAGES)) {
+    await sendToBoth(key);
+  }
 }
 
 main();
