@@ -5,7 +5,6 @@ const path = require("path");
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:exemplo@exemplo.com";
-const SCHEDULE = process.env.SCHEDULE || "";
 const MESSAGE = process.env.MESSAGE || "";
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -28,11 +27,6 @@ const MESSAGES = {
 
 // Qual cron disparou -> qual mensagem enviar.
 // Precisa bater exatamente com os crons do arquivo .github/workflows/lembrete-treino.yml
-const SCHEDULE_MAP = {
-  "3 11 * * 1-5": "bomdia",   // 08:03 horário de Brasília
-  "4 15 * * 1-5": "almoco",  // 12:04 horário de Brasília
-  "53 20 * * 1-5": "treino", // 17:53 horário de Brasília
-};
 
 async function sendTo(profileId, messageKey) {
   const file = path.join(__dirname, "subscriptions", profileId + ".json");
@@ -83,4 +77,14 @@ async function main() {
   }
 }
 
-main();
+async function main() {
+  // Chamada do cron-job.org informando exatamente qual mensagem mandar.
+  if (MESSAGES[MESSAGE]) {
+    await sendToBoth(MESSAGE);
+    return;
+  }
+  // Rodando manualmente sem nada especificado -> testa as 3 mensagens, pros dois.
+  for (const key of Object.keys(MESSAGES)) {
+    await sendToBoth(key);
+  }
+}
