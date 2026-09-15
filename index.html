@@ -660,15 +660,14 @@ function removeHistoryEntryFromCloud(profileId, id){
   try { ref.child(id).remove(); } catch(e){ console.log("Erro ao remover histórico da nuvem:", e.message); }
 }
 
-let otherHistory = [];
-let otherHistoryVisible = false;
-function loadOtherHistory(callback){
-  const otherId = currentProfile === "victor" ? "kaio" : "victor";
-  const ref = cloudHistoryRef(otherId);
+let cloudHistory = [];
+let cloudHistoryLoadedFor = null;
+function loadCloudHistory(profileId, callback){
+  const ref = cloudHistoryRef(profileId);
   if (!ref){ callback(); return; }
   ref.once("value").then(snap => {
     const val = snap.val() || {};
-    otherHistory = Object.values(val);
+    cloudHistory = Object.values(val);
     callback();
   }).catch(() => { callback(); });
 }
@@ -728,8 +727,8 @@ function selectProfile(id){
   saveProfile(id);
   DATA = PROFILES[id].data;
   TAB_ORDER = PROFILES[id].tabOrder;
-  otherHistory = [];
-  otherHistoryVisible = false;
+  cloudHistory = [];
+  cloudHistoryLoadedFor = null;
   initProfileData();
   hideProfileGate();
   updateProfileSwitchLabel();
@@ -977,7 +976,7 @@ function renderWorkoutPage(tabKey){
     });
   });
 
-    document.getElementById("finishBtn").addEventListener("click", () => {
+  document.getElementById("finishBtn").addEventListener("click", () => {
     const id = Date.now() + "_" + Math.random().toString(36).slice(2);
     const entry = { id, tab: tabKey, label: t.title, date: new Date().toISOString(), owner: currentProfile };
     history.unshift(entry);
@@ -1008,35 +1007,22 @@ function renderWorkoutPage(tabKey){
 }
 
 function renderRulesPage(){
-  const otherId = currentProfile === "victor" ? "kaio" : "victor";
-  const otherLabel = PROFILES[otherId] ? PROFILES[otherId].label : "";
+  // mescla o que está salvo neste aparelho com o que está na nuvem pra este perfil
+  // (assim, se você entrar no perfil do Kaio no SEU celular, vê o que ele marcou no dele)
+  const byId = {};
+  history.forEach(h => { byId[h.id] = h; });
+  cloudHistory.forEach(h => { if (!byId[h.id]) byId[h.id] = h; });
+  const combined = Object.values(byId).sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 30);
 
   let html = '<div class="history"><h2>Histórico recente</h2>';
-  if (history.length === 0){
+  if (combined.length === 0){
     html += '<div class="history-empty">Nenhum treino concluído ainda. Marque os exercícios e toque em "Concluir treino" para começar seu histórico.</div>';
   } else {
-    history.forEach(h => {
-      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + DATA[h.tab].label + '</span>' + h.label + '</span>';
+    combined.forEach(h => {
+      html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + h.tab + '</span>' + h.label + '</span>';
       html += '<span class="history-right"><span style="color:var(--muted)">' + formatDate(h.date) + '</span>';
       html += '<button class="history-del" data-hid="' + h.id + '">×</button></span></div>';
     });
-  }
-  html += '</div>';
-
-  html += '<div class="history" style="margin-top:14px;">';
-  html += '<h2>Treinos do ' + otherLabel + '</h2>';
-  html += '<button class="reset-link" id="toggleOtherHistoryBtn" style="margin:0 0 4px;">' + (otherHistoryVisible ? 'Esconder' : 'Ver treinos do ' + otherLabel) + '</button>';
-  if (otherHistoryVisible){
-    html += '<div style="margin-top:8px;">';
-    if (otherHistory.length === 0){
-      html += '<div class="history-empty">Nenhum treino concluído por ' + otherLabel + ' ainda.</div>';
-    } else {
-      otherHistory.slice().sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 20).forEach(h => {
-        html += '<div class="history-row"><span><span class="history-badge badge-' + h.tab + '">' + h.tab + '</span>' + h.label + '</span>';
-        html += '<span class="history-right"><span style="color:var(--muted)">' + formatDate(h.date) + '</span></span></div>';
-      });
-    }
-    html += '</div>';
   }
   html += '</div>';
 
@@ -1057,8 +1043,9 @@ function renderRulesPage(){
   document.querySelectorAll(".history-del").forEach(el => {
     el.addEventListener("click", () => {
       const hid = el.getAttribute("data-hid");
-           if (confirm("Apagar este registro do histórico?")){
+      if (confirm("Apagar este registro do histórico?")){
         history = history.filter(h => String(h.id) !== hid);
+        cloudHistory = cloudHistory.filter(h => String(h.id) !== hid);
         saveHistory(history);
         removeHistoryEntryFromCloud(currentProfile, hid);
         render();
@@ -1066,19 +1053,13 @@ function renderRulesPage(){
     });
   });
 
-    const toggleOtherBtn = document.getElementById("toggleOtherHistoryBtn");
-  if (toggleOtherBtn) toggleOtherBtn.addEventListener("click", () => {
-    if (otherHistoryVisible){
-      otherHistoryVisible = false;
-      render();
-    } else {
-      toggleOtherBtn.textContent = "Carregando...";
-      loadOtherHistory(() => {
-        otherHistoryVisible = true;
-        if (currentTab === "RULES") render();
-      });
-    }
-  });
+  if (cloudHistoryLoadedFor !== currentProfile){
+    const profileAtRequest = currentProfile;
+    loadCloudHistory(profileAtRequest, () => {
+      cloudHistoryLoadedFor = profileAtRequest;
+      if (currentTab === "RULES" && currentProfile === profileAtRequest) render();
+    });
+  }
 
   const notifBtn = document.getElementById("notifBtn");
   if (notifBtn) notifBtn.addEventListener("click", enableNotifications);
