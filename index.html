@@ -538,21 +538,24 @@ const DATA_KAIO = {
   A: {
     label: "A",
     title: "Treino A",
-    subtitle: "Peito + Tríceps",
+    subtitle: "Peito + Tríceps + Abdômen",
     groups: [
       { name: "Peito", items: [
-        ["Supino reto com barra","4x12",50],
-        ["Supino inclinado com halteres","4x12",50],
-        ["Flexão de braço","3x12",35],
-        ["Crucifixo com halteres no banco","3x15",35],
+        ["Supino reto com barra","3x8-12",45],
+        ["Supino inclinado com halteres","3x8-12",45],
+        ["Crucifixo com halteres no banco","3x10-15",45],
       ]},
       { name: "Tríceps", items: [
-        ["Tríceps testa com barra média","3x12",35],
-        ["Tríceps francês com halter","3x12",35],
-        ["Mergulho no banco","3x12",35],
+        ["Tríceps testa com barra","3x8-12",45],
+        ["Tríceps francês com halter","3x10-12",45],
+        ["Tríceps coice com halteres","3x12-15",45],
+      ]},
+      { name: "Abdômen", items: [
+        ["Abdominal tradicional","3x15-20",45],
+        ["Abdominal bicicleta","3x12-15 cada lado",45],
       ]},
       { name: "Cardio", items: [
-        ["Esteira","1km"],
+        ["Esteira","10-15 min (opcional)"],
       ]},
     ]
   },
@@ -562,57 +565,45 @@ const DATA_KAIO = {
     subtitle: "Costas + Bíceps",
     groups: [
       { name: "Costas", items: [
-        ["Remada curvada com barra","4x12",50],
-        ["Remada unilateral com halter no banco","4x12 cada lado",50],
-        ["Remada curvada pegada aberta","3x12",35],
-        ["Remada alta com barra","3x12",35],
-        ["Isometria de remada","3 séries de 20s",35],
+        ["Remada curvada com barra","3x8-12",45],
+        ["Remada unilateral com halter em pé","3x10-12 cada lado",45],
+        ["Pulldown","3x10-12",45],
+        ["Remada curvada pegada aberta","3x10-12",45],
       ]},
       { name: "Bíceps", items: [
-        ["Rosca direta com barra","3x12",35],
-        ["Rosca alternada","3x12",35],
-        ["Rosca martelo","3x12",35],
+        ["Rosca direta com barra","3x8-12",45],
+        ["Rosca alternada com halteres","3x10-12 cada braço",45],
+        ["Rosca martelo","3x10-15",45],
       ]},
       { name: "Cardio", items: [
-        ["Esteira","1km"],
+        ["Esteira","10-15 min (opcional)"],
       ]},
     ]
   },
   C: {
     label: "C",
     title: "Treino C",
-    subtitle: "Perna + Ombro",
+    subtitle: "Pernas + Ombros + Abdômen",
     groups: [
       { name: "Pernas", items: [
-        ["Agachamento com halteres ou anilhas","4x15",50],
-        ["Levantamento terra","4x10",50],
-        ["Afundo com halteres","3x12 cada perna",35],
-        ["Stiff com barra","3x12",35],
-        ["Agachamento sumô com halter","3x15",35],
-        ["Step-up no banco/step com halteres","3x12 cada perna",35],
-        ["Panturrilha segurando halteres","4x20",50],
+        ["Agachamento com halteres","3x8-12",45],
+        ["Cadeira extensora","3x10-15",45],
+        ["Stiff com barra ou halteres","3x8-12",45],
+        ["Subida no step (Step-up)","3x10-12 cada perna",45],
+        ["Panturrilha em pé com halteres","4x12-20",45],
       ]},
-      { name: "Ombro", items: [
-        ["Desenvolvimento com halteres","4x12",50],
-        ["Elevação lateral","3x15",35],
-        ["Elevação frontal","3x12",35],
+      { name: "Ombros", items: [
+        ["Desenvolvimento com halteres","3x8-12",45],
+        ["Elevação lateral","3x12-15",45],
+        ["Elevação frontal","3x10-15",45],
+        ["Encolhimento com halteres ou barra","3x12-15",45],
+      ]},
+      { name: "Abdômen", items: [
+        ["Abdominal tradicional","3x15-20",45],
+        ["Abdominal bicicleta","3x12-15 cada lado",45],
       ]},
       { name: "Cardio", items: [
-        ["Esteira","1km"],
-      ]},
-    ]
-  },
-  ABS: {
-    label: "Abs",
-    title: "Abdômen",
-    subtitle: "Rápido e intenso — 3 a 4 voltas",
-    groups: [
-      { name: "Circuito", items: [
-        ["Abdominal tradicional","20 repetições",20],
-        ["Abdominal bicicleta","20 rep. (10 cada lado)",20],
-        ["Abdominal canivete","15 repetições",20],
-        ["Mountain climbers","30s forte",20],
-        ["Descanso entre voltas","30s",10],
+        ["Esteira","10-15 min (opcional)"],
       ]},
     ]
   },
@@ -625,7 +616,7 @@ const DATA_KAIO = {
 
 const PROFILES = {
   victor: { label: "Victor", data: DATA_VICTOR, tabOrder: ["A","B","C","D","E","RULES"] },
-  kaio: { label: "Kaio", data: DATA_KAIO, tabOrder: ["A","B","C","ABS","RULES"] },
+  kaio: { label: "Kaio", data: DATA_KAIO, tabOrder: ["A","B","C","RULES"] },
 };
 
 let DATA = null;
