@@ -738,18 +738,23 @@ function selectProfile(id){
 }
 
 let restTimerInterval = null;
-let restRemaining = 0;
+let restEndTime = 0; // horário (timestamp) em que o descanso termina, não "quantos segundos faltam"
+
+function getRestRemaining(){
+  return Math.max(0, Math.round((restEndTime - Date.now()) / 1000));
+}
 
 function updateRestTimerUI(){
   const el = document.getElementById("restTimer");
   if (!el) return;
-  const m = Math.floor(restRemaining / 60);
-  const s = restRemaining % 60;
+  const remaining = getRestRemaining();
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
   const timeStr = String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
   el.innerHTML = '<div class="rt-info"><span class="rt-label">Descanso</span><span class="rt-time">' + timeStr + '</span></div>' +
     '<div class="rt-actions"><button class="rt-add" id="rtAdd">+15s</button><button class="rt-skip" id="rtSkip">Pular</button></div>';
   document.getElementById("rtAdd").addEventListener("click", () => {
-    restRemaining += 15;
+    restEndTime += 15000;
     updateRestTimerUI();
   });
   document.getElementById("rtSkip").addEventListener("click", hideRestTimer);
@@ -757,13 +762,12 @@ function updateRestTimerUI(){
 
 function showRestTimer(seconds){
   clearInterval(restTimerInterval);
-  restRemaining = seconds;
+  restEndTime = Date.now() + seconds * 1000;
   const el = document.getElementById("restTimer");
   updateRestTimerUI();
   if (el) el.classList.add("show");
   restTimerInterval = setInterval(() => {
-    restRemaining--;
-    if (restRemaining <= 0){
+    if (getRestRemaining() <= 0){
       clearInterval(restTimerInterval);
       restTimerInterval = null;
       hideRestTimer();
@@ -780,6 +784,20 @@ function hideRestTimer(){
   const el = document.getElementById("restTimer");
   if (el) el.classList.remove("show");
 }
+
+// Enquanto o app está em segundo plano, o navegador atrasa o setInterval pra economizar bateria.
+// Quando você volta pro app, isso corrige o cronômetro na hora, em vez de esperar o próximo "tique".
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && restTimerInterval){
+    if (getRestRemaining() <= 0){
+      clearInterval(restTimerInterval);
+      restTimerInterval = null;
+      hideRestTimer();
+    } else {
+      updateRestTimerUI();
+    }
+  }
+});
 
 let completeOverlayTimer = null;
 
